@@ -1,101 +1,114 @@
-import Image from "next/image";
+import { requireAdmin } from '@/lib/admin'
+import AdminHeader from '@/components/admin-header'
+import Notice from '@/components/notice'
+import ConfirmButton from '@/components/confirm-button'
+import { deleteChain } from './chains/actions'
 
-export default function Home() {
+export const dynamic = 'force-dynamic'
+
+const fmtDate = (d?: string | null) =>
+  d
+    ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
+    : '—'
+
+export default async function ChainsPage({
+  searchParams,
+}: {
+  searchParams: { ok?: string; error?: string }
+}) {
+  const { supabase, user } = await requireAdmin()
+
+  const { data, error } = await supabase
+    .from('prompt_chains')
+    .select('id, name, description, created_at, prompt_chain_steps(count)')
+    .order('id', { ascending: true })
+
+  const chains = (data ?? []) as {
+    id: number
+    name: string
+    description: string | null
+    created_at: string
+    prompt_chain_steps: { count: number }[]
+  }[]
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen">
+      <AdminHeader current="/" email={user.email} />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
+      <main className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Prompt chains</h1>
+            <p className="text-slate-600 dark:text-slate-300">
+              {chains.length} {chains.length === 1 ? 'chain' : 'chains'}
+            </p>
+          </div>
           <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/chains/new"
+            className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
+            + New chain
           </a>
         </div>
+
+        <Notice ok={searchParams.ok} error={searchParams.error ?? error?.message} />
+
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+              <tr>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3 text-right">Steps</th>
+                <th className="px-4 py-3">Added</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chains.map((c) => (
+                <tr key={c.id} className="border-b border-slate-100 last:border-0 dark:border-slate-700">
+                  <td className="px-4 py-3 font-semibold">{c.name}</td>
+                  <td className="px-4 py-3">
+                    <span className="block max-w-md text-slate-600 dark:text-slate-300">{c.description ?? '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">{c.prompt_chain_steps?.[0]?.count ?? 0}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{fmtDate(c.created_at)}</td>
+                  <td className="px-4 py-3">
+                    <form className="flex items-center justify-end gap-2">
+                      <a
+                        href={`/chains/${c.id}/run`}
+                        className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+                      >
+                        ▶ Run
+                      </a>
+                      <a
+                        href={`/chains/${c.id}`}
+                        className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+                      >
+                        Manage
+                      </a>
+                      <ConfirmButton
+                        action={deleteChain.bind(null, String(c.id))}
+                        message={`Delete the chain "${c.name}"? This cannot be undone.`}
+                        className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                      >
+                        Delete
+                      </ConfirmButton>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+              {chains.length === 0 && !error && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
+                    No chains yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
 }
