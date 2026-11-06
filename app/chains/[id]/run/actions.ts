@@ -13,6 +13,8 @@ export type RunResult = {
 export async function runChainAction(chainId: string, _prevState: RunResult, formData: FormData): Promise<RunResult> {
   const { supabase } = await requireAdmin()
   const imageId = String(formData.get('image_id') ?? '').trim()
+  const inputText = String(formData.get('input_text') ?? '').trim()
+  if (inputText.length > 5000) return { error: 'Text input is too long.', results: null, saveError: null }
 
   let imageUrl: string | null = null
   let resolvedImageId: string | null = null
@@ -42,7 +44,7 @@ export async function runChainAction(chainId: string, _prevState: RunResult, for
     model: s.llm_models.provider_model_id as string,
   }))
 
-  const { results, error } = await runChain(runSteps, imageUrl)
+  const { results, error } = await runChain(runSteps, imageUrl, inputText || null)
 
   const nameById = new Map(steps.map((s) => [s.id, s.name]))
   const displayResults = results.map((r) => ({

@@ -61,24 +61,34 @@ export default function RunPanel({ chainId, images }: { chainId: string; images:
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-start gap-4">
-        {isPhoto ? (
-          <img src={selected.image_url} alt="" className="h-32 w-32 rounded-xl object-cover" />
-        ) : (
-          <div className="flex h-32 w-32 items-center justify-center rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">
-            No photo
-          </div>
-        )}
-        <div className="flex flex-col items-start gap-2">
-          <button type="button" onClick={() => setSelected(null)} className="text-sm underline">
+      <form action={formAction} className="flex flex-col gap-4">
+        {isPhoto && <input type="hidden" name="image_id" value={selected.id} />}
+
+        <div className="flex items-start gap-4">
+          {isPhoto ? (
+            <img src={selected.image_url} alt="" className="h-32 w-32 rounded-xl object-cover" />
+          ) : (
+            <div className="flex h-32 w-32 items-center justify-center rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">
+              No photo
+            </div>
+          )}
+          <button type="button" onClick={() => setSelected(null)} className="self-start text-sm underline">
             {isPhoto ? 'Choose a different photo' : 'Pick a photo instead'}
           </button>
-          <form action={formAction}>
-            {isPhoto && <input type="hidden" name="image_id" value={selected.id} />}
-            <RunButton />
-          </form>
         </div>
-      </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-semibold">Text input (optional)</label>
+          <textarea
+            name="input_text"
+            rows={3}
+            placeholder="Add text if needed for prompt"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          />
+        </div>
+
+        <RunButton />
+      </form>
 
       {state.error && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

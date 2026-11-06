@@ -57,12 +57,12 @@ async function callGemini(model: string, parts: unknown[]) {
 }
 
 /**
- * Runs the steps in order. If an image is given, step 1 gets it (plus every
- * later step gets the previous step's text); chains that don't need a photo
- * can omit it and step 1 just gets its own instruction, like any other step.
+ * Runs the steps in order. If an image is given, step 1 gets it; if initial
+ * text is given, step 1 gets that too (either, both, or neither - every
+ * combination is optional). Every later step gets the previous step's text.
  * Returns whatever finished, plus an error if one failed.
  */
-export async function runChain(steps: RunStep[], imageUrl?: string | null) {
+export async function runChain(steps: RunStep[], imageUrl?: string | null, initialText?: string | null) {
   const results: StepResult[] = []
   let error: string | null = null
 
@@ -74,11 +74,9 @@ export async function runChain(steps: RunStep[], imageUrl?: string | null) {
       const step = steps[i]
       const parts: unknown[] = []
 
-      if (i === 0 && image) {
-        parts.push({ inline_data: { mime_type: image.mime, data: image.data } })
-        parts.push({ text: step.instruction })
-      } else if (i === 0) {
-        parts.push({ text: step.instruction })
+      if (i === 0) {
+        if (image) parts.push({ inline_data: { mime_type: image.mime, data: image.data } })
+        parts.push({ text: initialText ? `${step.instruction}\n\nInput:\n${initialText}` : step.instruction })
       } else {
         parts.push({
           text: `${step.instruction}\n\nOutput of the previous step:\n${previous}`,
